@@ -86,7 +86,7 @@ local headHitboxSize = 6
 
 local espBoxEnabled = false
 local espNameEnabled = false
-local espDistance = 80
+local espDistance = 300 
 
 local espBoxes = {}
 local espNames = {}
@@ -95,26 +95,32 @@ local characterConnections = {}
 local connections = {}
 
 -- =========================================================================
--- SISTEMA DE TEAM CHECK
+-- SISTEMA DE TEAM CHECK SEGURO
 -- =========================================================================
 local function isTeammate(otherPlayer)
-    if player.Team and otherPlayer.Team then
-        return player.Team == otherPlayer.Team
-    end
-    return false
+    local success, result = pcall(function()
+        if player.Team and otherPlayer.Team then
+            return player.Team == otherPlayer.Team
+        end
+        return false
+    end)
+    return success and result or false
 end
 
 local function restoreOriginalHeads()
     for _, otherPlayer in ipairs(Players:GetPlayers()) do
-        if originalHeadSizes[otherPlayer] and otherPlayer.Character then
-            local head = otherPlayer.Character:FindFirstChild("Head")
-            if head then
-                head.Size = originalHeadSizes[otherPlayer].size
-                head.Transparency = originalHeadSizes[otherPlayer].transparency
-                head.CanCollide = originalHeadSizes[otherPlayer].cancollide
-                head.Massless = originalHeadSizes[otherPlayer].massless
+        pcall(function()
+            if originalHeadSizes[otherPlayer] and otherPlayer.Character then
+                local head = otherPlayer.Character:FindFirstChild("Head")
+                if head then
+                    head.Size = originalHeadSizes[otherPlayer].size
+                    head.Transparency = originalHeadSizes[otherPlayer].transparency
+                    head.CanCollide = originalHeadSizes[otherPlayer].cancollide
+                    head.Massless = originalHeadSizes[otherPlayer].massless
+                    head.CastShadow = originalHeadSizes[otherPlayer].castshadow
+                end
             end
-        end
+        end)
     end
     originalHeadSizes = {}
 end
@@ -123,25 +129,27 @@ local function fullCleanup()
     headHitboxEnabled = false
     restoreOriginalHeads()
 
-    for _, boxGui in pairs(espBoxes) do if boxGui then boxGui:Destroy() end end
+    for _, boxGui in pairs(espBoxes) do pcall(function() if boxGui then boxGui:Destroy() end end) end
     espBoxes = {}
 
-    for _, nameGui in pairs(espNames) do if nameGui then nameGui:Destroy() end end
+    for _, nameGui in pairs(espNames) do pcall(function() if nameGui then nameGui:Destroy() end end) end
     espNames = {}
 
-    for _, conn in pairs(characterConnections) do if conn then conn:Disconnect() end end
+    for _, conn in pairs(characterConnections) do pcall(function() if conn then conn:Disconnect() end end) end
     characterConnections = {}
 
-    for _, conn in pairs(connections) do if conn then conn:Disconnect() end end
+    for _, conn in pairs(connections) do pcall(function() if conn then conn:Disconnect() end end) end
     connections = {}
 end
 
 -- =========================================================================
 -- DISEÑO DE LA INTERFAZ ESTILIZADA (ELIAN HUB)
 -- =========================================================================
-if CoreGui:FindFirstChild("ProfessionalMenuV9") then
-    CoreGui.ProfessionalMenuV9:Destroy()
-end
+pcall(function()
+    if CoreGui:FindFirstChild("ProfessionalMenuV9") then
+        CoreGui.ProfessionalMenuV9:Destroy()
+    end
+end)
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "ProfessionalMenuV9"
@@ -348,17 +356,18 @@ CloseBtn.MouseButton1Click:Connect(function()
 end)
 
 -- =========================================================================
--- SISTEMA DE LUCES RGB MÁS RÁPIDO ("AL PASO") PARA TÍTULO Y BORDES
+-- SISTEMA DE LUCES RGB SÚPER FLUIDO Y SUAVE ("AL PASO")
 -- =========================================================================
 task.spawn(function()
     while ScreenGui and ScreenGui.Parent do
-        local velocidad = 3.5 
-        local hue = (tick() * velocidad) % 1
-        local colorRgb = Color3.fromHSV(hue, 0.9, 1)
-        
-        Title.TextColor3 = colorRgb
-        MainStroke.Color = colorRgb
-        
+        pcall(function()
+            local velocidad = 0.8
+            local hue = (tick() * velocidad) % 1
+            local colorRgb = Color3.fromHSV(hue, 0.7, 1)
+            
+            Title.TextColor3 = colorRgb
+            MainStroke.Color = colorRgb
+        end)
         RunService.RenderStepped:Wait()
     end
 end)
@@ -525,10 +534,10 @@ end)
 createSlider(CombatPage, "Head Hitbox Size", 2, 30, 6, 60, function(val) headHitboxSize = val end)
 createToggle(VisualPage, "ESP Neon Box", 10, function(state) espBoxEnabled = state end)
 createToggle(VisualPage, "ESP Name", 60, function(state) espNameEnabled = state end)
-createSlider(VisualPage, "ESP Max Distance", 10, 150, 80, 110, function(val) espDistance = val end)
+createSlider(VisualPage, "ESP Max Distance", 50, 300, 300, 110, function(val) espDistance = val end)
 
 -- =========================================================================
--- SISTEMA DE EXPANSIÓN FÍSICA DE CABEZA (SIN ANCLAR AL PISO)
+-- SISTEMA DE EXPANSIÓN FÍSICA SEGURA DE CABEZA
 -- =========================================================================
 local function modificarCabeza(otherPlayer)
     if otherPlayer == player then return end
@@ -546,7 +555,8 @@ local function modificarCabeza(otherPlayer)
                 size = head.Size,
                 transparency = head.Transparency,
                 cancollide = head.CanCollide,
-                massless = head.Massless
+                massless = head.Massless,
+                castshadow = head.CastShadow
             }
         end
         
@@ -556,16 +566,19 @@ local function modificarCabeza(otherPlayer)
         local inRange = distance <= espDistance
 
         if headHitboxEnabled and isEnemy and inRange then
-            head.Size = Vector3.new(headHitboxSize, headHitboxSize, headHitboxSize)
+            local safeSize = math.clamp(headHitboxSize, 2, 30)
+            head.Size = Vector3.new(safeSize, safeSize, safeSize)
             head.Transparency = 0.6
             head.CanCollide = false
-            head.Massless = true 
+            head.Massless = true
+            head.CastShadow = false
         else
             if originalHeadSizes[otherPlayer] then
                 head.Size = originalHeadSizes[otherPlayer].size
                 head.Transparency = originalHeadSizes[otherPlayer].transparency
                 head.CanCollide = originalHeadSizes[otherPlayer].cancollide
                 head.Massless = originalHeadSizes[otherPlayer].massless
+                head.CastShadow = originalHeadSizes[otherPlayer].castshadow
             end
         end
     end
@@ -575,80 +588,82 @@ end
 -- BUCLE DE RENDERIZADO DE ESP Y HITBOX DE CABEZA
 -- =========================================================================
 local function aplicarEfectosAEnemigo(otherPlayer)
-    local char = otherPlayer.Character
-    if not char then return end 
-    
-    local hum = char:FindFirstChild("Humanoid")
-    local rootPart = char:FindFirstChild("HumanoidRootPart")
-    local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    
-    local isAlive = (hum and hum.Health > 0 and rootPart)
-    local isEnemy = isAlive and not isTeammate(otherPlayer)
-    
-    local distance = (myRoot and rootPart) and (rootPart.Position - myRoot.Position).Magnitude or 9999
-    local inRange = distance <= espDistance
+    pcall(function()
+        local char = otherPlayer.Character
+        if not char then return end 
+        
+        local hum = char:FindFirstChild("Humanoid")
+        local rootPart = char:FindFirstChild("HumanoidRootPart")
+        local myRoot = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        
+        local isAlive = (hum and hum.Health > 0 and rootPart)
+        local isEnemy = isAlive and not isTeammate(otherPlayer)
+        
+        local distance = (myRoot and rootPart) and (rootPart.Position - myRoot.Position).Magnitude or 9999
+        local inRange = distance <= espDistance
 
-    modificarCabeza(otherPlayer)
+        modificarCabeza(otherPlayer)
 
-    if espBoxEnabled and isEnemy and inRange and rootPart then
-        local boxGui = espBoxes[otherPlayer]
-        if not boxGui or boxGui.Parent ~= rootPart then
-            if boxGui then boxGui:Destroy() end
-            boxGui = Instance.new("BillboardGui")
-            boxGui.Name = "ESP_Box"
-            boxGui.AlwaysOnTop = true
-            boxGui.Size = UDim2.new(4, 0, 5.5, 0)
-            boxGui.Parent = rootPart
-            
-            local frame = Instance.new("Frame", boxGui)
-            frame.BackgroundTransparency = 1
-            frame.Size = UDim2.new(1, 0, 1, 0)
-            
-            local stroke = Instance.new("UIStroke", frame)
-            stroke.Color = Color3.fromRGB(255, 30, 70)
-            stroke.Thickness = 2
-            
-            espBoxes[otherPlayer] = boxGui
-        end
-        boxGui.Enabled = true
-    else
-        if espBoxes[otherPlayer] then espBoxes[otherPlayer].Enabled = false end
-    end
-
-    if espNameEnabled and isEnemy and inRange and rootPart then
-        local nameGui = espNames[otherPlayer]
-        if not nameGui or nameGui.Parent ~= rootPart then
-            if nameGui then nameGui:Destroy() end
-            nameGui = Instance.new("BillboardGui")
-            nameGui.Name = "ESP_Name"
-            nameGui.AlwaysOnTop = true
-            nameGui.Size = UDim2.new(0, 200, 0, 40)
-            nameGui.StudsOffset = Vector3.new(0, 3.8, 0)
-            nameGui.Parent = rootPart
-            
-            local textLabel = Instance.new("TextLabel", nameGui)
-            textLabel.BackgroundTransparency = 1
-            textLabel.Size = UDim2.new(1, 0, 1, 0)
-            textLabel.Font = Enum.Font.GothamBold
-            textLabel.Text = otherPlayer.Name .. " [" .. math.floor(distance) .. "m]"
-            textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-            textLabel.TextSize = 13
-            
-            local tStroke = Instance.new("UIStroke", textLabel)
-            tStroke.Color = Color3.fromRGB(0, 0, 0)
-            tStroke.Thickness = 1
-            
-            espNames[otherPlayer] = nameGui
-        else
-            local textLabel = nameGui:FindFirstChildOfClass("TextLabel")
-            if textLabel then
-                textLabel.Text = otherPlayer.Name .. " [" .. math.floor(distance) .. "m]"
+        if espBoxEnabled and isEnemy and inRange and rootPart then
+            local boxGui = espBoxes[otherPlayer]
+            if not boxGui or boxGui.Parent ~= rootPart then
+                if boxGui then boxGui:Destroy() end
+                boxGui = Instance.new("BillboardGui")
+                boxGui.Name = "ESP_Box"
+                boxGui.AlwaysOnTop = true
+                boxGui.Size = UDim2.new(4, 0, 5.5, 0)
+                boxGui.Parent = rootPart
+                
+                local frame = Instance.new("Frame", boxGui)
+                frame.BackgroundTransparency = 1
+                frame.Size = UDim2.new(1, 0, 1, 0)
+                
+                local stroke = Instance.new("UIStroke", frame)
+                stroke.Color = Color3.fromRGB(255, 30, 70)
+                stroke.Thickness = 2
+                
+                espBoxes[otherPlayer] = boxGui
             end
+            boxGui.Enabled = true
+        else
+            if espBoxes[otherPlayer] then espBoxes[otherPlayer].Enabled = false end
         end
-        nameGui.Enabled = true
-    else
-        if espNames[otherPlayer] then espNames[otherPlayer].Enabled = false end
-    end
+
+        if espNameEnabled and isEnemy and inRange and rootPart then
+            local nameGui = espNames[otherPlayer]
+            if not nameGui or nameGui.Parent ~= rootPart then
+                if nameGui then nameGui:Destroy() end
+                nameGui = Instance.new("BillboardGui")
+                nameGui.Name = "ESP_Name"
+                nameGui.AlwaysOnTop = true
+                nameGui.Size = UDim2.new(0, 200, 0, 40)
+                nameGui.StudsOffset = Vector3.new(0, 3.8, 0)
+                nameGui.Parent = rootPart
+                
+                local textLabel = Instance.new("TextLabel", nameGui)
+                textLabel.BackgroundTransparency = 1
+                textLabel.Size = UDim2.new(1, 0, 1, 0)
+                textLabel.Font = Enum.Font.GothamBold
+                textLabel.Text = otherPlayer.Name .. " [" .. math.floor(distance) .. "m]"
+                textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                textLabel.TextSize = 13
+                
+                local tStroke = Instance.new("UIStroke", textLabel)
+                tStroke.Color = Color3.fromRGB(0, 0, 0)
+                tStroke.Thickness = 1
+                
+                espNames[otherPlayer] = nameGui
+            else
+                local textLabel = nameGui:FindFirstChildOfClass("TextLabel")
+                if textLabel then
+                    textLabel.Text = otherPlayer.Name .. " [" .. math.floor(distance) .. "m]"
+                end
+            end
+            nameGui.Enabled = true
+        else
+            if espNames[otherPlayer] then espNames[otherPlayer].Enabled = false end
+        end
+    end)
 end
 
 local function trackearJugador(oPlayer)
