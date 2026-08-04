@@ -27,12 +27,23 @@ local gameName = string.lower(successName and gameInfo and gameInfo.Name or "")
 local esDuelistPorNombre = string.find(gameName, "duelist") ~= nil or string.find(gameName, "duelista") ~= nil
 local esDuelistPorId = (game.PlaceId == DUELIST_PLACE_ID)
 
-local function mostrarMensajeErrorYTeletransportar()
-    pcall(function()
-        if CoreGui:FindFirstChild("ErrorMenu") then
-            CoreGui.ErrorMenu:Destroy()
-        end
+-- Variables globales de control para el menú principal y la advertencia
+local DeviceGui = nil
+local ScreenGui = nil
 
+local function destruirMenus()
+    pcall(function()
+        if CoreGui:FindFirstChild("ErrorMenu") then CoreGui.ErrorMenu:Destroy() end
+        if CoreGui:FindFirstChild("DeviceSelectorGui") then CoreGui.DeviceSelectorGui:Destroy() end
+        if CoreGui:FindFirstChild("ProfessionalMenuV9") then CoreGui.ProfessionalMenuV9:Destroy() end
+        if DeviceGui then DeviceGui:Destroy() end
+        if ScreenGui then ScreenGui:Destroy() end
+    end)
+end
+
+local function mostrarMensajeErrorYTeletransportar()
+    destruirMenus()
+    pcall(function()
         local ErrorGui = Instance.new("ScreenGui")
         ErrorGui.Name = "ErrorMenu"
         ErrorGui.Parent = CoreGui
@@ -62,21 +73,9 @@ local function mostrarMensajeErrorYTeletransportar()
         Text.TextSize = 14
         Text.TextColor3 = Color3.fromRGB(255, 255, 255)
         Text.TextWrapped = true
-        Text.Text = "⚠ ¡ESTE SCRIPT ES SOLAMENTE PARA DUELISTA: PvP!\n\nRedirigiéndote al juego correcto..."
+        Text.Text = "⚠ ¡ESTE SCRIPT ES SOLAMENTE PARA DUELISTA: PvP!\n\nEscribe 'dueñoe' en el chat para forzar la carga del menú o serás redirigido..."
         Text.Parent = AlertFrame
     end)
-
-    task.wait(3)
-    
-    pcall(function()
-        local teleportOptions = Instance.new("TeleportOptions")
-        TeleportService:TeleportAsync(DUELIST_FALLBACK_ID, {player}, teleportOptions)
-    end)
-end
-
-if not esDuelistPorId and not esDuelistPorNombre then
-    mostrarMensajeErrorYTeletransportar()
-    return 
 end
 
 -- =========================================================================
@@ -99,7 +98,7 @@ local originalHeadSizes = {}
 local characterConnections = {}
 local connections = {}
 
-local dispositivoSeleccionado = nil -- "PC" o "Movil"
+local dispositivoSeleccionado = "PC" -- Por defecto al forzar con comando
 
 -- =========================================================================
 -- SISTEMA DE TEAM CHECK DINÁMICO
@@ -178,94 +177,12 @@ local function fullCleanup()
 end
 
 -- =========================================================================
--- MENÚ DE SELECCIÓN DE DISPOSITIVO (MÓVIL O PC)
+-- FUNCIÓN PARA INICIALIZAR EL MENÚ PRINCIPAL
 -- =========================================================================
-pcall(function()
-    if CoreGui:FindFirstChild("DeviceSelectorGui") then
-        CoreGui.DeviceSelectorGui:Destroy()
-    end
-    if CoreGui:FindFirstChild("ProfessionalMenuV9") then
-        CoreGui.ProfessionalMenuV9:Destroy()
-    end
-end)
-
-local DeviceGui = Instance.new("ScreenGui")
-DeviceGui.Name = "DeviceSelectorGui"
-DeviceGui.Parent = CoreGui
-DeviceGui.ResetOnSpawn = false
-DeviceGui.IgnoreGuiInset = true
-
-local DeviceFrame = Instance.new("Frame")
-DeviceFrame.Parent = DeviceGui
-DeviceFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-DeviceFrame.Position = UDim2.new(0.5, -170, 0.5, -110)
-DeviceFrame.Size = UDim2.new(0, 340, 0, 220)
-DeviceFrame.BorderSizePixel = 0
-
-local DCorner = Instance.new("UICorner")
-DCorner.CornerRadius = UDim.new(0, 14)
-DCorner.Parent = DeviceFrame
-
-local DStroke = Instance.new("UIStroke")
-DStroke.Color = Color3.fromRGB(255, 30, 70)
-DStroke.Thickness = 2.5
-DStroke.Parent = DeviceFrame
-
-local DTitle = Instance.new("TextLabel")
-DTitle.Parent = DeviceFrame
-DTitle.BackgroundTransparency = 1
-DTitle.Position = UDim2.new(0, 0, 0.1, 0)
-DTitle.Size = UDim2.new(1, 0, 0, 30)
-DTitle.Font = Enum.Font.GothamBold
-DTitle.Text = "⚡ ELIAN HUB"
-DTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-DTitle.TextSize = 18
-
-local DSub = Instance.new("TextLabel")
-DSub.Parent = DeviceFrame
-DSub.BackgroundTransparency = 1
-DSub.Position = UDim2.new(0, 0, 0.3, 0)
-DSub.Size = UDim2.new(1, 0, 0, 25)
-DSub.Font = Enum.Font.GothamMedium
-DSub.Text = "¿Desde qué dispositivo estás jugando?"
-DSub.TextColor3 = Color3.fromRGB(180, 180, 190)
-DSub.TextSize = 13
-
-local PcBtn = Instance.new("TextButton")
-PcBtn.Parent = DeviceFrame
-PcBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-PcBtn.Position = UDim2.new(0.08, 0, 0.55, 0)
-PcBtn.Size = UDim2.new(0.4, 0, 0, 45)
-PcBtn.Font = Enum.Font.GothamBold
-PcBtn.Text = "💻 PC"
-PcBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-PcBtn.TextSize = 14
-PcBtn.BorderSizePixel = 0
-
-local PcCorner = Instance.new("UICorner")
-PcCorner.CornerRadius = UDim.new(0, 10)
-PcCorner.Parent = PcBtn
-
-local MovilBtn = Instance.new("TextButton")
-MovilBtn.Parent = DeviceFrame
-MovilBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-MovilBtn.Position = UDim2.new(0.52, 0, 0.55, 0)
-MovilBtn.Size = UDim2.new(0.4, 0, 0, 45)
-MovilBtn.Font = Enum.Font.GothamBold
-MovilBtn.Text = "📱 Móvil"
-MovilBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MovilBtn.TextSize = 14
-MovilBtn.BorderSizePixel = 0
-
-local MovilCorner = Instance.new("UICorner")
-MovilCorner.CornerRadius = UDim.new(0, 10)
-MovilCorner.Parent = MovilBtn
-
--- Función para inicializar el menú principal tras elegir dispositivo
 local function iniciarMenuPrincipal()
-    DeviceGui:Destroy()
+    destruirMenus()
 
-    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Name = "ProfessionalMenuV9"
     ScreenGui.Parent = CoreGui
     ScreenGui.ResetOnSpawn = false
@@ -616,24 +533,16 @@ local function iniciarMenuPrincipal()
         end))
     end
 
-    if dispositivoSeleccionado == "PC" then
-        createToggle(CombatPage, "Aimbot Suave (Mantener Clic Derecho)", 10, function(state) aimbotEnabled = state end)
-        createToggle(CombatPage, "Hitbox", 60, function(state)
-            headHitboxEnabled = state
-            if not state then restoreOriginalHeads() end
-        end)
-        createSlider(CombatPage, "Head Hitbox Size", 2, 35, 6, 110, function(val) headHitboxSize = val end)
-        createToggle(CombatPage, "Aimbot Silencioso", 170, function(state)
-            silentAimHitboxEnabled = state
-            if not state then restoreOriginalHeads() end
-        end)
-    else
-        createToggle(CombatPage, "Hitbox", 10, function(state)
-            headHitboxEnabled = state
-            if not state then restoreOriginalHeads() end
-        end)
-        createSlider(CombatPage, "Head Hitbox Size", 2, 35, 6, 60, function(val) headHitboxSize = val end)
-    end
+    createToggle(CombatPage, "Aimbot Suave (Mantener Clic Derecho)", 10, function(state) aimbotEnabled = state end)
+    createToggle(CombatPage, "Hitbox", 60, function(state)
+        headHitboxEnabled = state
+        if not state then restoreOriginalHeads() end
+    end)
+    createSlider(CombatPage, "Head Hitbox Size", 2, 35, 6, 110, function(val) headHitboxSize = val end)
+    createToggle(CombatPage, "Aimbot Silencioso", 170, function(state)
+        silentAimHitboxEnabled = state
+        if not state then restoreOriginalHeads() end
+    end)
 
     createToggle(VisualPage, "ESP Neon Box", 10, function(state) espBoxEnabled = state end)
     createToggle(VisualPage, "ESP Name", 60, function(state) espNameEnabled = state end)
@@ -641,15 +550,61 @@ local function iniciarMenuPrincipal()
     createSlider(VisualPage, "ESP Max Distance", 50, 300, 300, 160, function(val) espDistance = val end)
 end
 
-PcBtn.MouseButton1Click:Connect(function()
-    dispositivoSeleccionado = "PC"
-    iniciarMenuPrincipal()
-end)
+-- =========================================================================
+-- VALIDACIÓN INICIAL Y DETECTOR DEL COMANDO EN CHAT ("dueñoe")
+-- =========================================================================
+local forzadoPorComando = false
 
-MovilBtn.MouseButton1Click:Connect(function()
-    dispositivoSeleccionado = "Movil"
+local function configurarEscuchaChat()
+    local function procesarTexto(texto)
+        if string.lower(texto) == "dueñoe" then
+            forzadoPorComando = true
+            iniciarMenuPrincipal()
+        end
+    end
+
+    local successTextChat, textChatService = pcall(function() return game:GetService("TextChatService") end)
+    if successTextChat and textChatService then
+        pcall(function()
+            textChatService.MessageReceived:Connect(function(message)
+                if message.TextSource and message.TextSource.UserId == player.UserId then
+                    procesarTexto(message.Text)
+                end
+            end)
+        end)
+    end
+
+    pcall(function()
+        player.Chatted:Connect(function(mensaje)
+            procesarTexto(mensaje)
+        end)
+    end)
+end
+
+configurarEscuchaChat()
+
+if not esDuelistPorId and not esDuelistPorNombre then
+    mostrarMensajeErrorYTeletransportar()
+    
+    task.spawn(function()
+        local tiempoTranscurrido = 0
+        while tiempoTranscurrido < 4 do
+            if forzadoPorComando then return end
+            task.wait(0.5)
+            tiempoTranscurrido = tiempoTranscurrido + 0.5
+        end
+        
+        if not forzadoPorComando then
+            pcall(function()
+                local teleportOptions = Instance.new("TeleportOptions")
+                TeleportService:TeleportAsync(DUELIST_FALLBACK_ID, {player}, teleportOptions)
+            end)
+        end
+    end)
+    return 
+else
     iniciarMenuPrincipal()
-end)
+end
 
 -- =========================================================================
 -- LOGICA DE AIMBOT SUAVE Y FLUIDO (SOLO PC) + TEAM CHECK
@@ -684,7 +639,7 @@ local function getClosestEnemyInFOV()
 end
 
 table.insert(connections, RunService.RenderStepped:Connect(function(dt)
-    if aimbotEnabled and dispositivoSeleccionado == "PC" then
+    if aimbotEnabled then
         if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
             local targetHead = getClosestEnemyInFOV()
             if targetHead then
@@ -728,7 +683,7 @@ local function modificarCabeza(otherPlayer)
         local inRange = distance <= espDistance
 
         if isEnemy and inRange then
-            if silentAimHitboxEnabled and dispositivoSeleccionado == "PC" then
+            if silentAimHitboxEnabled then
                 head.Size = Vector3.new(25, 25, 25)
                 head.Transparency = 1 
                 head.CanCollide = false
@@ -879,7 +834,7 @@ table.insert(connections, Players.PlayerAdded:Connect(trackearJugador))
 
 table.insert(connections, Players.PlayerRemoving:Connect(function(p)
     if espBoxes[p] then espBoxes[p]:Destroy() espBoxes[p] = nil end
-    if espNames[p] then espNames[p]:Destroy() espNames[p] = nil end -- Error corregido aquí (antes decía 'henn')
+    if espNames[p] then espNames[p]:Destroy() espNames[p] = nil end
     if espBodies[p] then espBodies[p]:Destroy() espBodies[p] = nil end
     if originalHeadSizes[p] then originalHeadSizes[p] = nil end
     if characterConnections[p] then characterConnections[p]:Disconnect() characterConnections[p] = nil end
