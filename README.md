@@ -1,5 +1,5 @@
 -- =========================================================================
--- ELIAN HUB V13.0 - ULTRA POLISHED, AUTO-DEVICE & ERROR-FREE
+-- ELIAN HUB V13.3 - ULTIMATE MOBILE & PC FIX (HITBOX + ESP)
 -- =========================================================================
 if not game:IsLoaded() then
     game.Loaded:Wait()
@@ -30,14 +30,17 @@ end
 destruirMenus()
 
 -- =========================================================================
--- DETECCIÓN AUTOMÁTICA DE DISPOSITIVO (ROBUSTA)
+-- DETECCIÓN HÍBRIDA ROBUSTA (MÓVIL / PC)
 -- =========================================================================
-local isMobileDevice = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+local isMobileDevice = (not UserInputService.KeyboardEnabled) and (UserInputService.TouchEnabled or table.find({"Delta", "Hydrogen", "Codex", "Fluxus", "ArceusX", "KRNL", "Synapse"}, identifyexecutor and identifyexecutor() or "") ~= nil)
+if UserInputService.TouchEnabled and not isMobileDevice then
+    isMobileDevice = true
+end
 
 -- =========================================================================
 -- VARIABLES GLOBALES Y DE ESTADO
 -- =========================================================================
-local headHitboxEnabled = false     
+local headHitboxEnabled = false      
 local headHitboxSize = 10 
 
 local aimbotEnabled = false
@@ -61,7 +64,6 @@ local espBodies = {}
 local originalHeadData = {} 
 local connections = {}
 
--- Manejo seguro de Clic Derecho en PC
 table.insert(connections, UserInputService.InputBegan:Connect(function(input, gpe)
     if not gpe and input.UserInputType == Enum.UserInputType.MouseButton2 then
         isRightClicking = true
@@ -83,12 +85,16 @@ local function restoreHeads()
     for plr, data in pairs(originalHeadData) do
         pcall(function()
             if data and data.Head and data.Head.Parent then
-                data.Head.Size = data.Size
-                data.Head.Transparency = data.Transparency
-                data.Head.Color = data.Color
-                data.Head.Material = data.Material
-                data.Head.CanCollide = data.CanCollide
-                data.Head.Massless = data.Massless
+                local head = data.Head
+                head.Size = data.Size
+                head.Transparency = data.Transparency
+                head.Color = data.Color
+                head.Material = data.Material
+                head.CanCollide = data.CanCollide
+                head.Massless = data.Massless
+                
+                local bp = head:FindFirstChild("ElianHitboxBP")
+                if bp then bp:Destroy() end
             end
         end)
     end
@@ -144,7 +150,7 @@ local function updateClosestHead()
 end
 
 -- =========================================================================
--- INTERFAZ GRÁFICA MEJORADA (ESTÉTICA PREMIUM V13)
+-- INTERFAZ GRÁFICA (ELIAN HUB V13.3)
 -- =========================================================================
 local function iniciarMenuPrincipal()
     destruirMenus()
@@ -170,7 +176,6 @@ local function iniciarMenuPrincipal()
     MainCorner.CornerRadius = UDim.new(0, 16)
     MainCorner.Parent = MainFrame
 
-    -- Sutil gradiente de fondo interior
     local MainGradient = Instance.new("UIGradient")
     MainGradient.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 23, 33)),
@@ -184,7 +189,6 @@ local function iniciarMenuPrincipal()
     MainStroke.Color = Color3.fromRGB(140, 90, 255)
     MainStroke.Parent = MainFrame
 
-    -- Brillo decorativo superior
     local TopGlow = Instance.new("Frame")
     TopGlow.Parent = MainFrame
     TopGlow.BackgroundColor3 = Color3.fromRGB(140, 90, 255)
@@ -192,7 +196,6 @@ local function iniciarMenuPrincipal()
     TopGlow.Size = UDim2.new(1, 0, 0, 3)
     TopGlow.BorderSizePixel = 0
 
-    -- Barra Superior
     local TopBar = Instance.new("Frame")
     TopBar.Parent = MainFrame
     TopBar.BackgroundTransparency = 1
@@ -204,7 +207,7 @@ local function iniciarMenuPrincipal()
     Title.Position = UDim2.new(0.04, 0, 0, 0)
     Title.Size = UDim2.new(0.65, 0, 1, 0)
     Title.Font = Enum.Font.GothamBold
-    Title.Text = "💎 ELIAN HUB V13  <font color='#8c5aff'>•</font> " .. (isMobileDevice and "MOBILE" or "PC")
+    Title.Text = "💎 ELIAN HUB V13.3 <font color='#8c5aff'>•</font> " .. (isMobileDevice and "MOBILE" or "PC")
     Title.RichText = true
     Title.TextColor3 = Color3.fromRGB(245, 245, 255)
     Title.TextSize = 13
@@ -290,7 +293,6 @@ local function iniciarMenuPrincipal()
     ContainerBody.Position = UDim2.new(0, 0, 0, 50)
     ContainerBody.Size = UDim2.new(1, 0, 1, -50)
 
-    -- Menú Lateral Estilizado
     local TabContainer = Instance.new("Frame")
     TabContainer.Parent = ContainerBody
     TabContainer.BackgroundColor3 = Color3.fromRGB(11, 13, 18)
@@ -406,7 +408,6 @@ local function iniciarMenuPrincipal()
     CloseBtn.MouseButton1Click:Connect(function() fullCleanup(); ScreenGui:Destroy() end)
     CloseBtn.TouchTap:Connect(function() fullCleanup(); ScreenGui:Destroy() end)
 
-    -- Animación de arcoíris sutil para el borde del menú
     task.spawn(function()
         while ScreenGui and ScreenGui.Parent do
             pcall(function()
@@ -554,7 +555,6 @@ local function iniciarMenuPrincipal()
         end))
     end
 
-    -- CONTENIDOS DE PÁGINAS
     createToggle(CombatPage, "Hitbox Cabeza Enemigo", 10, headHitboxEnabled, function(state)
         headHitboxEnabled = state
         if not state then restoreHeads() end
@@ -674,16 +674,19 @@ table.insert(connections, RunService.RenderStepped:Connect(function()
 end))
 
 -- =========================================================================
--- EXPANSION DE HITBOX, AIMBOT Y ESP
+-- HITBOX ANTITRABA / CERO PESO + ESP UNIVERSAL REPARADO (MÓVIL & PC)
 -- =========================================================================
 table.insert(connections, RunService.RenderStepped:Connect(function()
     updateClosestHead()
 
+    -- 1. GESTIÓN DE HITBOX Y PESO DE CABEZAS
     for _, otherPlayer in ipairs(Players:GetPlayers()) do
         if otherPlayer ~= player and otherPlayer.Character then
             pcall(function()
                 local head = getRealHead(otherPlayer.Character)
-                if head then
+                local hrp = otherPlayer.Character:FindFirstChild("HumanoidRootPart")
+                
+                if head and hrp then
                     if headHitboxEnabled then
                         if not originalHeadData[otherPlayer] then
                             originalHeadData[otherPlayer] = {
@@ -697,10 +700,23 @@ table.insert(connections, RunService.RenderStepped:Connect(function()
                             }
                         end
                         head.Size = Vector3.new(headHitboxSize, headHitboxSize, headHitboxSize)
-                        head.Transparency = 0.6
+                        head.Transparency = 0.5
                         head.Color = Color3.fromRGB(140, 90, 255)
                         head.Material = Enum.Material.Neon
                         head.CanCollide = false
+                        head.Massless = true
+
+                        -- Evita que la cabeza pese, se hunda o trabe al contrincante
+                        local bp = head:FindFirstChild("ElianHitboxBP")
+                        if not bp then
+                            bp = Instance.new("BodyPosition")
+                            bp.Name = "ElianHitboxBP"
+                            bp.MaxForce = Vector3.new(5000, 5000, 5000)
+                            bp.P = 4000
+                            bp.Parent = head
+                        end
+                        bp.Position = hrp.Position + Vector3.new(0, 2, 0)
+
                     elseif originalHeadData[otherPlayer] then
                         local data = originalHeadData[otherPlayer]
                         head.Size = data.Size
@@ -709,6 +725,10 @@ table.insert(connections, RunService.RenderStepped:Connect(function()
                         head.Material = data.Material
                         head.CanCollide = data.CanCollide
                         head.Massless = data.Massless
+                        
+                        local bp = head:FindFirstChild("ElianHitboxBP")
+                        if bp then bp:Destroy() end
+                        
                         originalHeadData[otherPlayer] = nil
                     end
                 end
@@ -728,22 +748,26 @@ table.insert(connections, RunService.RenderStepped:Connect(function()
         end
     end
 
+    -- 2. AIMBOT (SOLO PC)
     if aimbotEnabled and isRightClicking and currentTargetHead then
         pcall(function()
             camera.CFrame = CFrame.new(camera.CFrame.Position, currentTargetHead.Position)
         end)
     end
 
+    -- 3. SISTEMA ESP REPARADO PARA MÓVIL Y PC (BILLBOARDS Y HIGHLIGHTS ASEGURADOS)
     for _, otherPlayer in ipairs(Players:GetPlayers()) do
         if otherPlayer ~= player and otherPlayer.Character then
             pcall(function()
                 local char = otherPlayer.Character
                 local hrp = char:FindFirstChild("HumanoidRootPart")
                 local head = getRealHead(char)
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
                 
-                if hrp and head then
+                if hrp and head and humanoid and humanoid.Health > 0 then
                     local dist = (hrp.Position - camera.CFrame.Position).Magnitude
                     if dist <= espDistance then
+                        -- ESP Cuerpo (Highlight Azul)
                         if espBodyEnabled then
                             if not espBodies[otherPlayer] then
                                 local hl = Instance.new("Highlight")
@@ -751,43 +775,81 @@ table.insert(connections, RunService.RenderStepped:Connect(function()
                                 hl.FillColor = Color3.fromRGB(0, 180, 255)
                                 hl.OutlineColor = Color3.fromRGB(255, 255, 255)
                                 hl.FillTransparency = 0.5
+                                hl.OutlineTransparency = 0
+                                hl.Adornee = char
                                 hl.Parent = char
                                 espBodies[otherPlayer] = hl
+                            else
+                                espBodies[otherPlayer].Adornee = char
                             end
                         elseif espBodies[otherPlayer] then
                             espBodies[otherPlayer]:Destroy()
                             espBodies[otherPlayer] = nil
                         end
 
+                        -- ESP Nombre y Distancia Adaptado para Móvil
                         if espNameEnabled then
                             if not espNames[otherPlayer] then
                                 local bGui = Instance.new("BillboardGui")
-                                bGui.Size = UDim2.new(0, 200, 0, 30)
+                                bGui.Name = "ElianESP_Name"
+                                bGui.Size = UDim2.new(0, 200, 0, 40)
                                 bGui.AlwaysOnTop = true
                                 bGui.Adornee = head
+                                bGui.StudsOffset = Vector3.new(0, 2.5, 0)
+                                bGui.Parent = char
                                 
                                 local txt = Instance.new("TextLabel")
+                                txt.Name = "EspText"
                                 txt.Parent = bGui
                                 txt.Size = UDim2.new(1, 0, 1, 0)
                                 txt.BackgroundTransparency = 1
                                 txt.TextColor3 = Color3.fromRGB(0, 230, 255)
                                 txt.Font = Enum.Font.GothamBold
-                                txt.TextSize = 11
-                                txt.Text = otherPlayer.Name
-                                
-                                bGui.Parent = parentGui
+                                txt.TextSize = 13
+                                txt.TextStrokeTransparency = 0.4
                                 espNames[otherPlayer] = bGui
+                            else
+                                local bGui = espNames[otherPlayer]
+                                bGui.Adornee = head
+                                local txt = bGui:FindFirstChild("EspText")
+                                if txt then
+                                    txt.Text = otherPlayer.Name .. " [" .. math.floor(dist) .. "m]"
+                                end
                             end
                         elseif espNames[otherPlayer] then
                             espNames[otherPlayer]:Destroy()
                             espNames[otherPlayer] = nil
                         end
+                    else
+                        if espBodies[otherPlayer] then
+                            espBodies[otherPlayer]:Destroy()
+                            espBodies[otherPlayer] = nil
+                        end
+                        if espNames[otherPlayer] then
+                            espNames[otherPlayer]:Destroy()
+                            espNames[otherPlayer] = nil
+                        end
+                    end
+                else
+                    if espBodies[otherPlayer] then
+                        espBodies[otherPlayer]:Destroy()
+                        espBodies[otherPlayer] = nil
+                    end
+                    if espNames[otherPlayer] then
+                        espNames[otherPlayer]:Destroy()
+                        espNames[otherPlayer] = nil
                     end
                 end
             end)
         else
-            if espBodies[otherPlayer] then espBodies[otherPlayer]:Destroy() espBodies[otherPlayer] = nil end
-            if espNames[otherPlayer] then espNames[otherPlayer]:Destroy() espNames[otherPlayer] = nil end
+            if espBodies[otherPlayer] then
+                pcall(function() espBodies[otherPlayer]:Destroy() end)
+                espBodies[otherPlayer] = nil
+            end
+            if espNames[otherPlayer] then
+                pcall(function() espNames[otherPlayer]:Destroy() end)
+                espNames[otherPlayer] = nil
+            end
         end
     end
 end))
